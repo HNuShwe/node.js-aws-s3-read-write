@@ -1,0 +1,48 @@
+service: testing
+provider:
+  name: aws
+  runtime: nodejs12.x
+  region: ap-southeast-1
+  stage: dev
+  environment:
+    NODE_ENV: dev
+
+package:
+  individually: true
+
+functions:
+  app:
+    handler: dist/server.handler
+    events:
+      - http:
+          path: /api
+          method: ANY
+          cors:
+              origin: "*"
+              headers: # <-- Specify allowed headers
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+              - x-access-token
+              - Access-Control-Allow-Headers
+              - Access-Control-Allow-Origin
+              allowCredentials: true
+      - http:
+          path: /api/{proxy+}
+          method: ANY
+          cors:
+              origin: "*"
+              headers: # <-- Specify allowed headers
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+              - x-access-token
+              allowCredentials: true
+plugins:
+  - serverless-offline

@@ -22,6 +22,8 @@ exports.UsersController = void 0;
 // src/users/usersController.ts
 const tsoa_1 = require("tsoa");
 const usersService_1 = require("./usersService");
+require('../config/requiredModel');
+const AWSS3 = require('../config/s3upload');
 let UsersController = class UsersController extends tsoa_1.Controller {
     getUser() {
         return __awaiter(this, void 0, void 0, function* () {
@@ -51,6 +53,101 @@ let UsersController = class UsersController extends tsoa_1.Controller {
             });
         });
     }
+    SaveProfileImage(reqBody) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const ResponseData = yield this.SavingProfileImageForUser(reqBody);
+            return ResponseData;
+        });
+    }
+    GetProfileImage(reqBody) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const ResponseData = yield this.getImage(reqBody.userid);
+            return ResponseData;
+        });
+    }
+    SavingProfileImageForUser(reqBody) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let imagefilename = '';
+            let type = reqBody.mainimage.split(';')[0].split('/')[1];
+            if (type !== "jpeg" || type !== "png" || type !== "jpg") {
+                type = "png";
+            }
+            imagefilename = moment().format('YYYYMMDDHHmmss') + '.' + type;
+            const uploadBody = {
+                image: reqBody.mainimage,
+                foldername: "userprofile",
+                filename: imagefilename,
+            };
+            // console.log("before upload to s3")
+            const ResponseData = yield this.UploadToS3(uploadBody);
+            if (ResponseData.status === "200") {
+                const afterupload = ResponseData.data;
+                // console.log(afterupload);
+                const saveBody = {
+                    userid: reqBody.userid,
+                    image: imagefilename
+                };
+                const AfterUpdate = yield this.UpdateUserInDB(saveBody);
+                return AfterUpdate;
+            }
+            else {
+                return ResponseData;
+            }
+        });
+    }
+    getImage(userid) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return new Promise(resolve => {
+                usersService_1.UsersService.selectuser(userid, (error1, resp1) => {
+                    if (error1) {
+                        resolve({ status: "500", message: error1, data: null });
+                    }
+                    else {
+                        AWSS3.getImage({
+                            filename: resp1.image,
+                            foldername: "userprofile"
+                        }, (error, resp) => {
+                            if (error) {
+                                resolve({ status: "500", message: error, data: null });
+                            }
+                            else {
+                                resolve({ status: "200", message: "Success", data: resp });
+                            }
+                        });
+                    }
+                });
+            });
+        });
+    }
+    UploadToS3(uploadBody) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return new Promise(resolve => {
+                AWSS3.uploadImage(uploadBody, (error, resp) => {
+                    if (error) {
+                        console.log(error);
+                        resolve({ status: "500", message: error, data: null });
+                    }
+                    else {
+                        resolve({ status: "200", message: "Success", data: resp });
+                    }
+                });
+            });
+        });
+    }
+    UpdateUserInDB(data) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return new Promise(resolve => {
+                usersService_1.UsersService.updateUser(data, (err, result) => {
+                    if (err) {
+                        resolve({ status: "500", message: "Error", data: err });
+                    }
+                    else {
+                        resolve({ status: "200", message: "Admin updated", data: result });
+                    }
+                });
+            });
+        });
+    }
 };
 __decorate([
     (0, tsoa_1.Get)()
@@ -61,6 +158,15 @@ __decorate([
     (0, tsoa_1.Post)(),
     __param(0, (0, tsoa_1.Body)())
 ], UsersController.prototype, "createUser", null);
+__decorate([
+    (0, tsoa_1.SuccessResponse)("201", "Saved"),
+    (0, tsoa_1.Post)('saveimage'),
+    __param(0, (0, tsoa_1.Body)())
+], UsersController.prototype, "SaveProfileImage", null);
+__decorate([
+    (0, tsoa_1.Post)('getimage'),
+    __param(0, (0, tsoa_1.Body)())
+], UsersController.prototype, "GetProfileImage", null);
 UsersController = __decorate([
     (0, tsoa_1.Route)("users")
 ], UsersController);

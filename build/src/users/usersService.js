@@ -68,6 +68,62 @@ class UsersService {
             }
         });
     }
+    static updateUser(user, callback) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const toupdateuserid = user.userid;
+                delete user.userid;
+                const queryString = `update ${tablename} set ? where userid=?`;
+                DB.getConnection((getconnectionerr, connection) => {
+                    if (getconnectionerr) {
+                        callback(getconnectionerr, null);
+                    }
+                    else {
+                        const i = connection.query(queryString, [user, toupdateuserid], (queryerr, result) => {
+                            if (queryerr) {
+                                callback(queryerr, null);
+                            }
+                            else {
+                                callback(null, result);
+                            }
+                        });
+                        console.log(i.sql);
+                        connection.release();
+                    }
+                });
+            }
+            catch (error) {
+                console.error(error);
+                callback(error, null);
+            }
+        });
+    }
+    static selectuser(userid, callback) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const queryString = "SELECT * FROM ${tablename}  where userid =?;";
+                DB.getConnection((getconnectionerr, connection) => {
+                    if (getconnectionerr) {
+                        callback(getconnectionerr, null);
+                    }
+                    else {
+                        const i = connection.query(queryString, [userid], (queryerr, result) => {
+                            if (queryerr) {
+                                callback(queryerr, null);
+                            }
+                            else {
+                                callback(null, result[0]);
+                            }
+                        }); // console.log(i.sql);
+                        connection.release();
+                    }
+                });
+            }
+            catch (error) {
+                callback(error, null);
+            }
+        });
+    }
 }
 exports.UsersService = UsersService;
 //# sourceMappingURL=usersService.js.map
